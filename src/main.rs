@@ -54,7 +54,8 @@ fn generate_article(article_html: String) -> (){
     let mut link: &str = "NULL";
 
     if let Some(title_element) = article.select(&title_selector).next() {
-        title = title_element.text().collect::<Vec<_>>().join(" ");
+        let title_text: String = title_element.text().collect::<Vec<_>>().join("");
+        title = title_text.split_whitespace().collect::<Vec<_>>().join(" ");
     }
     
     if let Some(image_element) = article.select(&image_selector).next() {
@@ -66,7 +67,8 @@ fn generate_article(article_html: String) -> (){
     }
 
     if let Some(blurb_text) = article.select(&blurb_selector).next(){
-        blurb = blurb_text.text().collect::<Vec<_>>().join(" ");
+        let blurb_text_raw = blurb_text.text().collect::<Vec<_>>().join(" ");
+        blurb = blurb_text_raw.split_whitespace().collect::<Vec<_>>().join(" ");
     }
 
     let mut file_path: String = String::from("output/");
