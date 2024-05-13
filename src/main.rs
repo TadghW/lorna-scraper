@@ -5,7 +5,6 @@ extern crate chrono;
 
 use scraper::{Html, Selector};
 use chrono::Utc;
-use uuid::Uuid;
 use tokio::task::JoinHandle;
 use std::fs::File;
 use std::io::prelude::*;
@@ -15,31 +14,34 @@ use std::path::Path;
 async fn main() -> Result<(), reqwest::Error> {
 
     let url: &str = "https://www.lornasiggins.com/";
-    let payload: String = reqwest::get(url).await?.text().await?;
-    let html: Html = Html::parse_document(&payload);
-    let article_selector: Selector = Selector::parse("div.showcase-item").unwrap();
-    let mut handles: Vec<JoinHandle<()>> = Vec::new();
+    let response: String = reqwest::get(url).await?.text().await?;
+    let document: Html = Html::parse_document(&response);
 
-    for article in html.select(&article_selector) {
-        let article_html: String = article.html();
-        let handle: JoinHandle<()> = tokio::task::spawn( async move {
-            generate_article(article_html);
-        });
-        handles.push(handle);
-    }
+    let article_section_selector: Selector = Selector::parse("#showcase div.showcase-item").unwrap();
+    let audio_section_selector: Selector = Selector::parse("#showcase2 div.showcase-item").unwrap();
 
-    // Wait for all threads to complete
-    for handle in handles {
-        handle.await.unwrap();
-    }
+    transpose_all_articles(&document, article_section_selector, "output/articles/".into()).await;
+    transpose_all_articles(&document, audio_section_selector, "output/audio/".into()).await;
 
     Ok(())
+
 }
 
-fn generate_article(article_html: String) -> (){
+async fn transpose_all_articles(document: &Html, selector: Selector, directory: String) -> (){
+
+    for article in document.select(&selector) {
+        let directory_copy: String = directory.clone();
+        let article_html: String = article.html();
+        let _handle: JoinHandle<()> = tokio::task::spawn( async move {
+            generate_article(article_html, directory_copy);
+        });
+    }
+
+}
+
+fn generate_article(article_html: String, directory: String) -> (){
 
     let article = Html::parse_fragment(&article_html);
-    let uuid: String = Uuid::new_v4().to_string();
 
     let image_selector: Selector = Selector::parse("img.showcase-image").unwrap();
     let title_selector: Selector = Selector::parse("div.showcase-title b").unwrap();
@@ -71,12 +73,13 @@ fn generate_article(article_html: String) -> (){
         blurb = blurb_text_raw.split_whitespace().collect::<Vec<_>>().join(" ");
     }
 
-    let mut file_path: String = String::from("output/");
-    file_path.push_str(&uuid);
+    let mut file_path: String = String::from(directory);
+    let sanitized_title: String = sanitize_title(&title);
+    file_path.push_str(&sanitized_title);
     file_path.push_str(".md");
     
+    println!("{} - Writing {} to disk at {}...", time_str, title, file_path);
     let mut file = File::create(Path::new(&file_path)).expect("Unable to create file");
-    println!("{} - Writing {} to disk...", time_str, title);
     writeln!(file, "---").expect("Unable to write to file");
     writeln!(file, "title: '{}'", title ).expect("Unable to write to file");
     writeln!(file, "date: '{}'", time_str).expect("Unable to write to file");
@@ -86,3 +89,10 @@ fn generate_article(article_html: String) -> (){
     writeln!(file, "---").expect("Unable to write to file");
 
 }
+
+fn sanitize_title(filename: &str) -> String {
+    let mut sanitized = filename.to_owned(); // Only convert once
+    let invalid_chars = [':', '<', '>', '/', '\\', '|', '?', '*', '"', '\''];
+    sanitized.retain(|c| !invalid_chars.contains(&c)); // More efficient filtering
+    sanitized.trim().to_owned()
+}  
