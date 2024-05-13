@@ -83,7 +83,7 @@ fn generate_article(article_html: String, directory: String) -> (){
     writeln!(file, "---").expect("Unable to write to file");
     writeln!(file, "title: '{}'", title ).expect("Unable to write to file");
     writeln!(file, "date: '{}'", time_str).expect("Unable to write to file");
-    writeln!(file, "image: '{}'", image_href).expect("Unable to write to file");
+    writeln!(file, "image: '/images/{}'", image_href).expect("Unable to write to file");
     writeln!(file, "blurb: '{}'", blurb).expect("Unable to write to file");
     writeln!(file, "link: '{}'", link).expect("Unable to write to file");
     writeln!(file, "---").expect("Unable to write to file");
