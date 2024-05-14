@@ -57,7 +57,8 @@ fn generate_article(article_html: String, directory: String) -> (){
 
     if let Some(title_element) = article.select(&title_selector).next() {
         let title_text: String = title_element.text().collect::<Vec<_>>().join("");
-        title = title_text.split_whitespace().collect::<Vec<_>>().join(" ");
+        let title_text_whitespace_sanitized = title_text.split_whitespace().collect::<Vec<_>>().join(" ");
+        title = sanitize_text(&sanitize_title(&title_text_whitespace_sanitized));
     }
     
     if let Some(image_element) = article.select(&image_selector).next() {
@@ -70,22 +71,22 @@ fn generate_article(article_html: String, directory: String) -> (){
 
     if let Some(blurb_text) = article.select(&blurb_selector).next(){
         let blurb_text_raw = blurb_text.text().collect::<Vec<_>>().join(" ");
-        blurb = blurb_text_raw.split_whitespace().collect::<Vec<_>>().join(" ");
+        let blurb_text_whitespace_sanitized = blurb_text_raw.split_whitespace().collect::<Vec<_>>().join(" ");
+        blurb = sanitize_text(&blurb_text_whitespace_sanitized);
     }
 
     let mut file_path: String = String::from(directory);
-    let sanitized_title: String = sanitize_title(&title);
-    file_path.push_str(&sanitized_title);
+    file_path.push_str(&title);
     file_path.push_str(".md");
     
     println!("{} - Writing {} to disk at {}...", time_str, title, file_path);
     let mut file = File::create(Path::new(&file_path)).expect("Unable to create file");
     writeln!(file, "---").expect("Unable to write to file");
-    writeln!(file, "title: '{}'", title ).expect("Unable to write to file");
-    writeln!(file, "date: '{}'", time_str).expect("Unable to write to file");
-    writeln!(file, "image: '/images/{}'", image_href).expect("Unable to write to file");
-    writeln!(file, "blurb: '{}'", blurb).expect("Unable to write to file");
-    writeln!(file, "link: '{}'", link).expect("Unable to write to file");
+    writeln!(file, "title: \"{}\"", title ).expect("Unable to write to file");
+    writeln!(file, "date: \"{}\"", time_str).expect("Unable to write to file");
+    writeln!(file, "image: \"/images/{}\"", image_href).expect("Unable to write to file");
+    writeln!(file, "blurb: \"{}\"", blurb).expect("Unable to write to file");
+    writeln!(file, "link: \"{}\"", link).expect("Unable to write to file");
     writeln!(file, "---").expect("Unable to write to file");
 
 }
@@ -96,3 +97,8 @@ fn sanitize_title(filename: &str) -> String {
     sanitized.retain(|c| !invalid_chars.contains(&c)); // More efficient filtering
     sanitized.trim().to_owned()
 }  
+
+fn sanitize_text(text: &str) -> String{
+    let text = text.replace("\"", "'");
+    return text.to_string();
+}
